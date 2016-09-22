@@ -6,10 +6,12 @@ namespace OrientDB.BinaryDriver.Prototype
     public class OrientDBBinaryConnectionStream
     {
         private readonly IOrientDBConnection _connection;
+        private NetworkStream Stream { get; }
 
         public OrientDBBinaryConnectionStream(IOrientDBConnection connection, NetworkStream stream)
         {
             _connection = connection;
+            Stream = stream;
         }
 
         private object _syncRoot = new object();

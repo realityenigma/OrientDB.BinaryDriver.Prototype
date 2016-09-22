@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
@@ -30,6 +31,7 @@ namespace OrientDB.BinaryDriver.Prototype
         {
             DataItems.Add(new RequestDataItem() { Type = "int", Data = BinarySerializer.ToArray(i) });
         }
+
         internal void AddDataItem(long l)
         {
             DataItems.Add(new RequestDataItem() { Type = "long", Data = BinarySerializer.ToArray(l) });

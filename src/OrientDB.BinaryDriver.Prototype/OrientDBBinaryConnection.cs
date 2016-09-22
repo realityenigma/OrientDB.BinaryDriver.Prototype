@@ -1,19 +1,18 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Contracts;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
-    public class OrientDBBinaryConnection : IOrientDBConnection
+    public class OrientDBBinaryConnection : IOrientDBConnection, IDisposable
     {
         public ConnectionMetaData ConnectionMetaData { get; private set; }
 
         private readonly IOrientDBRecordSerializer _serialier;
         private readonly ConnectionOptions _connectionOptions;
         private OrientDBBinaryConnectionStream _connectionStream;
+        private OpenDatabaseResult _openResult; // might not be how I model this here in the end.
 
 
         public OrientDBBinaryConnection(ConnectionOptions options, IOrientDBRecordSerializer serializer)
@@ -36,17 +35,21 @@ namespace OrientDB.BinaryDriver.Prototype
             var connectionMetaData = new ConnectionMetaData();
             connectionMetaData.ProtocolVersion = BinarySerializer.ToShort(readBuffer.Take(2).ToArray());
             if (connectionMetaData.ProtocolVersion < 27)
-                connectionMetaData.UseTokenBasedSessions = false;
+                connectionMetaData.UseTokenBasedSession = false;
 
-            Request request = new Request();
-            //request.AddDataItem((byte));
-            //request.AddDataItem(sessionId);
+            ConnectionMetaData = connectionMetaData;
 
+            _openResult = new DatabaseOpenOperation(_connectionOptions, ConnectionMetaData, networkStream).Open();
         }
 
         public IOrientDBQuery CreateQuery()
         {
             return new OrientDBBinaryQuery(_connectionStream, _serialier);
+        }
+
+        public void Dispose()
+        {
+            // slkdjlksdjfdslkfjsdlkfsdjflsdfj
         }
     }
 }
