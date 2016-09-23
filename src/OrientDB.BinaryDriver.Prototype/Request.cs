@@ -11,7 +11,8 @@ namespace OrientDB.BinaryDriver.Prototype
 
         internal Request()
         { 
-            DataItems = new List<RequestDataItem>();    
+            DataItems = new List<RequestDataItem>();
+            SessionId = -1;  
         }
 
         internal void AddDataItem(byte b)

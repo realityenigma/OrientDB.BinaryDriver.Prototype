@@ -68,6 +68,40 @@ namespace OrientDB.BinaryDriver.Prototype
         {
             Request request = CreateRequest();
 
+            byte[] bufferData;
+            using (MemoryStream stream = new MemoryStream())
+            {
+                foreach (RequestDataItem item in request.DataItems)
+                {
+                    switch (item.Type)
+                    {
+                        case "byte":
+                        case "short":
+                        case "int":
+                        case "long":
+                            stream.Write(item.Data, 0, item.Data.Length);
+                            break;
+                        case "record":
+                            bufferData = new byte[2 + item.Data.Length];
+                            Buffer.BlockCopy(BinarySerializer.ToArray(item.Data.Length), 0, bufferData, 0, 2);
+                            Buffer.BlockCopy(item.Data, 0, bufferData, 2, item.Data.Length);
+                            stream.Write(bufferData, 0, bufferData.Length);
+                            break;
+                        case "bytes":
+                        case "string":
+                        case "strings":
+                            byte[] a = BinarySerializer.ToArray(item.Data.Length);
+                            stream.Write(a, 0, a.Length);
+                            stream.Write(item.Data, 0, item.Data.Length);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                Send(stream.ToArray());
+            }
+
             var reader = new BinaryReader(_stream);
             var status = (ResponseStatus)reader.ReadByte();
             var sessionId = reader.ReadInt32EndianAware();
@@ -163,6 +197,22 @@ namespace OrientDB.BinaryDriver.Prototype
             string release = reader.ReadInt32PrefixedString();
 
             return new OpenDatabaseResult(sessionId, token, clusterCount, clusters, clusterConfig, release);
-        }        
+        }
+
+        private void Send(byte[] rawData)
+        {
+            if ((_stream != null) && _stream.CanWrite)
+            {
+                try
+                {
+                    _stream.Write(rawData, 0, rawData.Length);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(ex.Message, ex.InnerException);
+                }
+            }
+
+        }
     }
 }

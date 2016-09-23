@@ -32,12 +32,10 @@ namespace OrientDB.BinaryDriver.Prototype
             var networkStream = socket.GetStream();
             networkStream.Read(readBuffer, 0, 2);
 
-            var connectionMetaData = new ConnectionMetaData();
-            connectionMetaData.ProtocolVersion = BinarySerializer.ToShort(readBuffer.Take(2).ToArray());
-            if (connectionMetaData.ProtocolVersion < 27)
-                connectionMetaData.UseTokenBasedSession = false;
-
-            ConnectionMetaData = connectionMetaData;
+            ConnectionMetaData = new ConnectionMetaData();
+            ConnectionMetaData.ProtocolVersion = BinarySerializer.ToShort(readBuffer.Take(2).ToArray());
+            if (ConnectionMetaData.ProtocolVersion < 27)
+                ConnectionMetaData.UseTokenBasedSession = false;
 
             _openResult = new DatabaseOpenOperation(_connectionOptions, ConnectionMetaData, networkStream).Open();
         }

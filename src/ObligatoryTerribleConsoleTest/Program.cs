@@ -16,7 +16,7 @@ namespace ObligatoryTerribleConsoleTest
                 HostName = "127.0.0.1",
                 Password = "root",
                 Port = 2424,
-                Type = DatabaseType.Document,
+                Type = DatabaseType.Graph,
                 UserName = "root"
             }, null))
             {
