@@ -37,7 +37,15 @@ namespace OrientDB.BinaryDriver.Prototype
             if (ConnectionMetaData.ProtocolVersion < 27)
                 ConnectionMetaData.UseTokenBasedSession = false;
 
-            _openResult = new DatabaseOpenOperation(_connectionOptions, ConnectionMetaData, networkStream).Open();
+            _connectionStream = new OrientDBBinaryConnectionStream(ConnectionMetaData, networkStream);
+
+            _openResult = new DatabaseOpenOperation(_connectionOptions, ConnectionMetaData, _connectionStream).Open();
+        }
+
+        public void Close()
+        {
+            new DatabaseCloseOperation(_openResult.Token, _openResult.SessionId, ConnectionMetaData, _connectionStream).Close();
+            _connectionStream.Close();
         }
 
         public IOrientDBQuery CreateQuery()
@@ -47,7 +55,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
         public void Dispose()
         {
-            // slkdjlksdjfdslkfjsdlkfsdjflsdfj
+            
         }
     }
 }

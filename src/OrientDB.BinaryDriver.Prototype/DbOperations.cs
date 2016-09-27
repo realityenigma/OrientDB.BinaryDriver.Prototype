@@ -1,20 +1,15 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Constants;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
     internal class DatabaseOpenOperation
     {
         private readonly ConnectionOptions _options;
-        private readonly NetworkStream _stream;
+        private readonly OrientDBBinaryConnectionStream _stream;
         private readonly ConnectionMetaData _metaData;
 
-        public DatabaseOpenOperation(ConnectionOptions options, ConnectionMetaData metaData, NetworkStream stream)
+        public DatabaseOpenOperation(ConnectionOptions options, ConnectionMetaData metaData, OrientDBBinaryConnectionStream stream)
         {
             _options = options;
             _stream = stream;
@@ -23,7 +18,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
         private Request CreateRequest()
         {
-            Request request = new Prototype.Request();
+            Request request = new Prototype.Request(OperationMode.Synchronous);
 
             // standard request fields
             request.AddDataItem((byte)OperationType.DB_OPEN);
@@ -68,77 +63,11 @@ namespace OrientDB.BinaryDriver.Prototype
         {
             Request request = CreateRequest();
 
-            byte[] bufferData;
-            using (MemoryStream stream = new MemoryStream())
-            {
-                foreach (RequestDataItem item in request.DataItems)
-                {
-                    switch (item.Type)
-                    {
-                        case "byte":
-                        case "short":
-                        case "int":
-                        case "long":
-                            stream.Write(item.Data, 0, item.Data.Length);
-                            break;
-                        case "record":
-                            bufferData = new byte[2 + item.Data.Length];
-                            Buffer.BlockCopy(BinarySerializer.ToArray(item.Data.Length), 0, bufferData, 0, 2);
-                            Buffer.BlockCopy(item.Data, 0, bufferData, 2, item.Data.Length);
-                            stream.Write(bufferData, 0, bufferData.Length);
-                            break;
-                        case "bytes":
-                        case "string":
-                        case "strings":
-                            byte[] a = BinarySerializer.ToArray(item.Data.Length);
-                            stream.Write(a, 0, a.Length);
-                            stream.Write(item.Data, 0, item.Data.Length);
-                            break;
-                        default:
-                            break;
-                    }
-                }
+            _stream.Send(_stream.CreateBytes(request));
 
-                Send(stream.ToArray());
-            }
+            var reader = _stream.GetResponseReader();
 
-            var reader = new BinaryReader(_stream);
-            var status = (ResponseStatus)reader.ReadByte();
             var sessionId = reader.ReadInt32EndianAware();
-
-            if(status == ResponseStatus.ERROR)
-            {
-                string exceptionString = "";
-
-                byte followByte = reader.ReadByte();
-
-                while (followByte == 1)
-                {
-                    int exceptionClassLength = reader.ReadInt32EndianAware();
-                    byte[] exceptionSringByte = reader.ReadBytes(exceptionClassLength);
-                    exceptionString += System.Text.Encoding.UTF8.GetString(exceptionSringByte, 0, exceptionSringByte.Length) + ": ";
-
-                    int exceptionMessageLength = reader.ReadInt32EndianAware();
-
-                    // don't read exception message string if it's null
-                    if (exceptionMessageLength != -1)
-                    {
-                        byte[] exceptionByte = reader.ReadBytes(exceptionMessageLength);
-                        exceptionString += System.Text.Encoding.UTF8.GetString(exceptionByte, 0, exceptionByte.Length) + "\n";
-                    }
-
-                    followByte = reader.ReadByte();
-                }
-                if (_metaData.ProtocolVersion >= 19)
-                {
-                    int serializedVersionLength = reader.ReadInt32EndianAware();
-                    var buffer = reader.ReadBytes(serializedVersionLength);
-                }
-
-                throw new Exception(exceptionString);
-            }
-
-            sessionId = reader.ReadInt32EndianAware();
             byte[] token = null;
 
             if (_metaData.ProtocolVersion > 26)
@@ -197,22 +126,6 @@ namespace OrientDB.BinaryDriver.Prototype
             string release = reader.ReadInt32PrefixedString();
 
             return new OpenDatabaseResult(sessionId, token, clusterCount, clusters, clusterConfig, release);
-        }
-
-        private void Send(byte[] rawData)
-        {
-            if ((_stream != null) && _stream.CanWrite)
-            {
-                try
-                {
-                    _stream.Write(rawData, 0, rawData.Length);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(ex.Message, ex.InnerException);
-                }
-            }
-
         }
     }
 }

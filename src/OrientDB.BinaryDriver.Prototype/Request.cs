@@ -4,13 +4,16 @@ using System.Collections.Generic;
 namespace OrientDB.BinaryDriver.Prototype
 {
     internal class Request
-    {       
+    {
+        internal OperationMode OperationMode { get; }
+
         internal List<RequestDataItem> DataItems { get; set; }
 
         internal int SessionId { get; private set; }
 
-        internal Request()
-        { 
+        internal Request(OperationMode mode)
+        {
+            this.OperationMode = mode;
             DataItems = new List<RequestDataItem>();
             SessionId = -1;  
         }

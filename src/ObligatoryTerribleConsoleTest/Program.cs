@@ -21,6 +21,8 @@ namespace ObligatoryTerribleConsoleTest
             }, null))
             {
                 conn.Open();
+
+                conn.Close();
             }
         }
     }
