@@ -1,14 +1,10 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Contracts;
 using System;
-using System.Linq;
-using System.Net.Sockets;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
     public class OrientDBBinaryConnection : IOrientDBConnection, IDisposable
     {
-        public ConnectionMetaData ConnectionMetaData { get; private set; }
-
         private readonly IOrientDBRecordSerializer _serialier;
         private readonly ConnectionOptions _connectionOptions;
         private OrientDBBinaryConnectionStream _connectionStream;
@@ -23,39 +19,24 @@ namespace OrientDB.BinaryDriver.Prototype
 
         public void Open()
         {
-            var readBuffer = new byte[1024];
-
-            var socket = new TcpClient();
-            socket.ReceiveTimeout = (30 * 1000);
-            socket.ConnectAsync(_connectionOptions.HostName, _connectionOptions.Port).GetAwaiter().GetResult();
-
-            var networkStream = socket.GetStream();
-            networkStream.Read(readBuffer, 0, 2);
-
-            ConnectionMetaData = new ConnectionMetaData();
-            ConnectionMetaData.ProtocolVersion = BinarySerializer.ToShort(readBuffer.Take(2).ToArray());
-            if (ConnectionMetaData.ProtocolVersion < 27)
-                ConnectionMetaData.UseTokenBasedSession = false;
-
-            _connectionStream = new OrientDBBinaryConnectionStream(ConnectionMetaData, networkStream);
-
-            _openResult = new DatabaseOpenOperation(_connectionOptions, ConnectionMetaData, _connectionStream).Open();
+            _connectionStream = new OrientDBBinaryConnectionStream(_connectionOptions);
+            _openResult = _connectionStream.Send(new DatabaseOpenOperation(_connectionOptions, _connectionStream.ConnectionMetaData));
         }
 
         public void Close()
         {
-            new DatabaseCloseOperation(_openResult.Token, _openResult.SessionId, ConnectionMetaData, _connectionStream).Close();
-            _connectionStream.Close();
+            _connectionStream.Send(new DatabaseCloseOperation(_openResult.Token, _connectionStream.ConnectionMetaData));
+            _connectionStream.Close();            
         }
 
-        public IOrientDBQuery CreateQuery()
+        public IOrientDBCommand CreateCommand()
         {
-            return new OrientDBBinaryQuery(_connectionStream, _serialier);
+            return new OrientDBCommand(_connectionStream, _serialier);
         }
 
         public void Dispose()
         {
-            
+            Close();
         }
     }
 }

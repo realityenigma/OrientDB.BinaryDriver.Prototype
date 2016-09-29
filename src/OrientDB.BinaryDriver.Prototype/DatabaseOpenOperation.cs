@@ -1,22 +1,22 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Constants;
+using OrientDB.BinaryDriver.Prototype.Contracts;
 using System.Collections.Generic;
+using System.IO;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
-    internal class DatabaseOpenOperation
+    internal class DatabaseOpenOperation : IOrientDBOperation<OpenDatabaseResult>
     {
         private readonly ConnectionOptions _options;
-        private readonly OrientDBBinaryConnectionStream _stream;
         private readonly ConnectionMetaData _metaData;
 
-        public DatabaseOpenOperation(ConnectionOptions options, ConnectionMetaData metaData, OrientDBBinaryConnectionStream stream)
+        public DatabaseOpenOperation(ConnectionOptions options, ConnectionMetaData metaData)
         {
             _options = options;
-            _stream = stream;
             _metaData = metaData;
         }
 
-        private Request CreateRequest()
+        public Request CreateRequest()
         {
             Request request = new Prototype.Request(OperationMode.Synchronous);
 
@@ -59,14 +59,8 @@ namespace OrientDB.BinaryDriver.Prototype
             return request;
         }
 
-        public OpenDatabaseResult Open()
+        public OpenDatabaseResult Execute(BinaryReader reader)
         {
-            Request request = CreateRequest();
-
-            _stream.Send(_stream.CreateBytes(request));
-
-            var reader = _stream.GetResponseReader();
-
             var sessionId = reader.ReadInt32EndianAware();
             byte[] token = null;
 
@@ -104,7 +98,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
                         byte[] clusterTypeByte = reader.ReadBytes(clusterTypeLength);
                         string clusterType = System.Text.Encoding.UTF8.GetString(clusterTypeByte, 0, clusterTypeByte.Length);
-                    
+
                         if (_metaData.ProtocolVersion >= 12)
                             cluster.DataSegmentID = reader.ReadInt16EndianAware();
                         else

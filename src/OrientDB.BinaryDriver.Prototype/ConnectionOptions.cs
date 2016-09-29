@@ -10,5 +10,6 @@ namespace OrientDB.BinaryDriver.Prototype
         public DatabaseType Type { get; set; }
         public string HostName { get; set; }
         public int Port { get; set; }
+        public int PoolSize { get; set; } = 10;
     }
 }

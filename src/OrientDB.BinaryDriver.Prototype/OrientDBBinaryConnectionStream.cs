@@ -1,24 +1,60 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Contracts;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
     public class OrientDBBinaryConnectionStream
     {
-        private readonly ConnectionMetaData _metaData;
-        private NetworkStream Stream { get; }
+        public ConnectionMetaData ConnectionMetaData { get; private set; }
+        private readonly ConnectionOptions _connectionOptions;
 
-        public OrientDBBinaryConnectionStream(ConnectionMetaData connectionMetaData, NetworkStream stream)
+        private ConcurrentBag<NetworkStream> _streamPool = new ConcurrentBag<NetworkStream>();
+
+        public OrientDBBinaryConnectionStream(ConnectionOptions options)
         {
-            _metaData = connectionMetaData;
-            Stream = stream;
+            _connectionOptions = options;
+
+            for (var i = 0; i < options.PoolSize; i++)
+            {
+                _streamPool.Add(CreateNetworkStream());
+            }
         }
 
-        public BinaryReader GetResponseReader()
+        private NetworkStream CreateNetworkStream()
         {
-            var reader = new BinaryReader(Stream);
+            var readBuffer = new byte[1024];
+
+            var socket = new TcpClient();
+            socket.ReceiveTimeout = (30 * 1000);
+            socket.ConnectAsync(_connectionOptions.HostName, _connectionOptions.Port).GetAwaiter().GetResult();
+
+            var networkStream = socket.GetStream();
+            networkStream.Read(readBuffer, 0, 2);
+
+            ConnectionMetaData = new ConnectionMetaData();
+            ConnectionMetaData.ProtocolVersion = BinarySerializer.ToShort(readBuffer.Take(2).ToArray());
+            if (ConnectionMetaData.ProtocolVersion < 27)
+                ConnectionMetaData.UseTokenBasedSession = false;
+
+            return networkStream;
+        }
+
+        private NetworkStream GetNetworkStream()
+        {
+            NetworkStream stream;
+            _streamPool.TryTake(out stream);
+            if (stream == null)
+                return CreateNetworkStream();
+            return stream;
+        }
+
+        private BinaryReader GetResponseReader(NetworkStream stream)
+        {
+            var reader = new BinaryReader(stream);
             var status = (ResponseStatus)reader.ReadByte();
             var sessionId = reader.ReadInt32EndianAware();
 
@@ -45,7 +81,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
                     followByte = reader.ReadByte();
                 }
-                if ( _metaData.ProtocolVersion >= 19)
+                if (ConnectionMetaData.ProtocolVersion >= 19)
                 {
                     int serializedVersionLength = reader.ReadInt32EndianAware();
                     var buffer = reader.ReadBytes(serializedVersionLength);
@@ -59,7 +95,10 @@ namespace OrientDB.BinaryDriver.Prototype
 
         public void Close()
         {
-            Stream.Dispose();
+            foreach (var stream in _streamPool)
+            {
+                stream.Dispose();
+            }
         }
 
         internal byte[] CreateBytes(Request request)
@@ -101,22 +140,53 @@ namespace OrientDB.BinaryDriver.Prototype
 
         private object _syncRoot = new object();
 
-        public void Send(byte[] buffer)
+        internal T Send<T>(IOrientDBOperation<T> operation)
         {
-            lock (_syncRoot)
+            var stream = GetNetworkStream();
+
+            Request request = operation.CreateRequest();
+
+            var reader = Send(request);
+
+            T result = operation.Execute(reader);
+
+            ReturnStream(stream);
+
+            return result;
+        }
+
+        // Return the Stream back to the pool.
+        private void ReturnStream(NetworkStream stream)
+        {
+            _streamPool.Add(stream);
+        }
+
+        private BinaryReader Send(Request request)
+        {
+            var stream = GetNetworkStream();
+
+            Send(CreateBytes(request), stream);
+
+            if (request.OperationMode == OperationMode.Asynchronous)
+                return null;
+
+            return GetResponseReader(stream);
+        }
+
+        private void Send(byte[] buffer, NetworkStream stream)
+        {
+            if ((stream != null) && stream.CanWrite)
             {
-                if ((Stream != null) && Stream.CanWrite)
+                try
                 {
-                    try
-                    {
-                        Stream.Write(buffer, 0, buffer.Length);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(ex.Message, ex.InnerException);
-                    }
+                    stream.Write(buffer, 0, buffer.Length);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(ex.Message, ex.InnerException);
                 }
             }
+
         }
     }
 }

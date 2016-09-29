@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
-    public class OrientDBBinaryQuery : IOrientDBQuery
+    public class OrientDBCommand : IOrientDBCommand
     {
         private readonly OrientDBBinaryConnectionStream _stream;
         private readonly IOrientDBRecordSerializer _serializer;
 
-        public OrientDBBinaryQuery(OrientDBBinaryConnectionStream stream, IOrientDBRecordSerializer serializer)
+        public OrientDBCommand(OrientDBBinaryConnectionStream stream, IOrientDBRecordSerializer serializer)
         {
             _stream = stream;
             _serializer = serializer;

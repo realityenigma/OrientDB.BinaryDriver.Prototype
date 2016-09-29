@@ -1,29 +1,34 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Constants;
+using OrientDB.BinaryDriver.Prototype.Contracts;
 using System;
 using System.IO;
 using System.Net.Sockets;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
-    internal class DatabaseCloseOperation
+    internal class DatabaseCloseOperation : IOrientDBOperation<CloseDatabaseResult>
     {
         private readonly ConnectionMetaData _metaData;
         private readonly byte[] _connectionToken;
-        private OrientDBBinaryConnectionStream _stream;
-        private int _sessionId;
 
-        public DatabaseCloseOperation(byte[] token, int sessionId, ConnectionMetaData metaData, OrientDBBinaryConnectionStream stream)
+        public DatabaseCloseOperation(byte[] token, ConnectionMetaData metaData)
         {
             _connectionToken = token;
             _metaData = metaData;
-            _stream = stream;
-            _sessionId = sessionId;
         }
 
-        private Request CreateRequest()
+        internal byte[] ReadToken(BinaryReader reader)
+        {
+            var size = reader.ReadInt32EndianAware();
+            var token = reader.ReadBytesRequired(size);            
+
+            return token;
+        }
+
+        public Request CreateRequest()
         {
             Request request = new Prototype.Request(OperationMode.Asynchronous);
-            
+
             request.AddDataItem((byte)OperationType.DB_CLOSE);
             request.AddDataItem(request.SessionId);
 
@@ -35,20 +40,9 @@ namespace OrientDB.BinaryDriver.Prototype
             return request;
         }
 
-        internal byte[] ReadToken(BinaryReader reader)
+        public CloseDatabaseResult Execute(BinaryReader reader)
         {
-            var size = reader.ReadInt32EndianAware();
-            var token = reader.ReadBytesRequired(size);            
-
-            return token;
-        }
-
-        internal void Close()
-        {
-            Request request = CreateRequest();
-
-            byte[] buffer = _stream.CreateBytes(request);
-            _stream.Send(buffer);            
+            return new CloseDatabaseResult(true);
         }
     }
 }

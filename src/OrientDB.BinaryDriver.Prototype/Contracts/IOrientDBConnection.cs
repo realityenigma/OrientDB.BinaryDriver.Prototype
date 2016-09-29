@@ -2,6 +2,6 @@
 {
     public interface IOrientDBConnection
     {        
-        IOrientDBQuery CreateQuery();
+        IOrientDBCommand CreateCommand();
     }
 }

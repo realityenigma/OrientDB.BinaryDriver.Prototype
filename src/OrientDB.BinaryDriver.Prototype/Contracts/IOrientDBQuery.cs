@@ -2,7 +2,7 @@
 
 namespace OrientDB.BinaryDriver.Prototype.Contracts
 {
-    public interface IOrientDBQuery
+    public interface IOrientDBCommand
     {
         IEnumerable<T> Execute<T>(string query);
     }
