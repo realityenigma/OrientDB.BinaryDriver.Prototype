@@ -158,7 +158,10 @@ namespace OrientDB.BinaryDriver.Prototype
         // Return the Stream back to the pool.
         private void ReturnStream(NetworkStream stream)
         {
-            _streamPool.Add(stream);
+            if (_streamPool.Count >= _connectionOptions.PoolSize)
+                stream.Dispose();
+            else
+                _streamPool.Add(stream);
         }
 
         private BinaryReader Send(Request request, NetworkStream stream)
