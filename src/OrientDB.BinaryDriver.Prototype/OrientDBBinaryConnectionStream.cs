@@ -146,7 +146,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
             Request request = operation.CreateRequest();
 
-            var reader = Send(request);
+            var reader = Send(request, stream);
 
             T result = operation.Execute(reader);
 
@@ -161,10 +161,8 @@ namespace OrientDB.BinaryDriver.Prototype
             _streamPool.Add(stream);
         }
 
-        private BinaryReader Send(Request request)
+        private BinaryReader Send(Request request, NetworkStream stream)
         {
-            var stream = GetNetworkStream();
-
             Send(CreateBytes(request), stream);
 
             if (request.OperationMode == OperationMode.Asynchronous)
