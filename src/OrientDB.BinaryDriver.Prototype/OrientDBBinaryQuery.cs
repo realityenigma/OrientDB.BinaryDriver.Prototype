@@ -1,8 +1,5 @@
 ﻿using OrientDB.BinaryDriver.Prototype.Contracts;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace OrientDB.BinaryDriver.Prototype
 {
@@ -19,7 +16,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
         public IEnumerable<T> Execute<T>(string query)
         {
-            throw new NotImplementedException();
+            return _stream.Send(new DatabaseCommandOperation<T>(query)).Results;
         }
     }
 }
