@@ -1,4 +1,5 @@
-﻿using OrientDB.BinaryDriver.Prototype.Contracts;
+﻿using OrientDB.BinaryDriver.Prototype.Command;
+using OrientDB.BinaryDriver.Prototype.Contracts;
 using System;
 using System.IO;
 
@@ -8,50 +9,19 @@ namespace OrientDB.BinaryDriver.Prototype
     {
         private readonly string _query;
         private readonly string _fetchPlan;
+        private readonly ICommandPayloadConstructorFactory _payloadFactory;
 
-        public DatabaseCommandOperation(string query, string fetchPlan = "*:0")
+        public DatabaseCommandOperation(ICommandPayloadConstructorFactory payloadFacctory, string query, string fetchPlan = "*:0")
         {
             _query = query;
             _fetchPlan = fetchPlan;
+            _payloadFactory = payloadFacctory;
         }
 
         public Request CreateRequest()
         {
-            CommandPayloadQuery payload = new CommandPayloadQuery();
-            payload.Text = _query;
-            payload.NonTextLimit = -1;
-            payload.FetchPlan = _fetchPlan;
-
-            Request request = new Request(OperationMode.Asynchronous);
-            //base.Request(request);
-
-            // operation specific fields
-            request.AddDataItem((byte)request.OperationMode);
-
-            // idempotent command (e.g. select)
-            var queryPayload = payload;
-            if (queryPayload != null)
-            {
-                // Write command payload length
-                request.AddDataItem(queryPayload.PayLoadLength);
-                request.AddDataItem(queryPayload.ClassName);
-                //(text:string)(non-text-limit:int)[(fetch-plan:string)](serialized-params:bytes[])
-                request.AddDataItem(queryPayload.Text);
-                request.AddDataItem(queryPayload.NonTextLimit);
-                request.AddDataItem(queryPayload.FetchPlan);
-
-                if (queryPayload.SerializedParams == null || queryPayload.SerializedParams.Length == 0)
-                {
-                    request.AddDataItem((int)0);
-                }
-                else
-                {
-                    request.AddDataItem(queryPayload.SerializedParams);
-                }
-                return request;
-            }
-
-            return request; // NO THIS ISN'T DONE.
+            return _payloadFactory.CreatePayload(_query, _fetchPlan).CreatePayloadRequest();
+            
             // non-idempotent command (e.g. insert)
             //var scriptPayload = CommandPayload as CommandPayloadScript; <----- Liskov Violations We MUST fix this.
             //if (scriptPayload != null)

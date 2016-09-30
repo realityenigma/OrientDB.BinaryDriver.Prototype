@@ -1,6 +1,6 @@
 ﻿namespace OrientDB.BinaryDriver.Prototype.Contracts
 {
-    public interface IOrientDBConnection
+    internal interface IOrientDBConnection
     {        
         IOrientDBCommand CreateCommand();
     }

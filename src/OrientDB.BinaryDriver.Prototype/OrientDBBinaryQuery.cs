@@ -1,4 +1,5 @@
-﻿using OrientDB.BinaryDriver.Prototype.Contracts;
+﻿using OrientDB.BinaryDriver.Prototype.Command;
+using OrientDB.BinaryDriver.Prototype.Contracts;
 using System.Collections.Generic;
 
 namespace OrientDB.BinaryDriver.Prototype
@@ -7,16 +8,18 @@ namespace OrientDB.BinaryDriver.Prototype
     {
         private readonly OrientDBBinaryConnectionStream _stream;
         private readonly IOrientDBRecordSerializer _serializer;
+        private readonly ICommandPayloadConstructorFactory _payloadFactory;
 
-        public OrientDBCommand(OrientDBBinaryConnectionStream stream, IOrientDBRecordSerializer serializer)
+        internal OrientDBCommand(OrientDBBinaryConnectionStream stream, IOrientDBRecordSerializer serializer, ICommandPayloadConstructorFactory payloadFactory)
         {
             _stream = stream;
             _serializer = serializer;
+            _payloadFactory = payloadFactory;
         }
 
         public IEnumerable<T> Execute<T>(string query)
         {
-            return _stream.Send(new DatabaseCommandOperation<T>(query)).Results;
+            return _stream.Send(new DatabaseCommandOperation<T>(_payloadFactory, query)).Results;
         }
     }
 }
