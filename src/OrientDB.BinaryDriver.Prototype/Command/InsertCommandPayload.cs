@@ -3,13 +3,13 @@ using System;
 
 namespace OrientDB.BinaryDriver.Prototype.Command
 {
-    internal class SelectCommandPayload : ICommandPayload
+    internal class InsertCommandPayload : ICommandPayload
     {
         private readonly string _sqlString;
         private readonly string _fetchPlan;
         private readonly ConnectionMetaData _metaData;
 
-        public SelectCommandPayload(string sql, string fetchPlan, ConnectionMetaData metaData)
+        public InsertCommandPayload(string sql, string fetchPlan, ConnectionMetaData metaData)
         {
             _sqlString = sql;
             _fetchPlan = fetchPlan;
@@ -18,13 +18,11 @@ namespace OrientDB.BinaryDriver.Prototype.Command
 
         public Request CreatePayloadRequest()
         {
-            CommandPayloadQuery payload = new CommandPayloadQuery();
+            CommandPayloadScript payload = new CommandPayloadScript();
             payload.Text = _sqlString;
-            payload.NonTextLimit = -1;
-            payload.FetchPlan = _fetchPlan;
+            payload.Language = "sql";
 
             Request request = new Request(OperationMode.Synchronous);
-            //base.Request(request);
 
             request.AddDataItem((byte)OperationType.COMMAND);
             request.AddDataItem(_metaData.SessionId);
@@ -37,26 +35,22 @@ namespace OrientDB.BinaryDriver.Prototype.Command
             // operation specific fields
             request.AddDataItem((byte)request.OperationMode);
 
-            // idempotent command (e.g. select)
-            var queryPayload = payload;
-            if (queryPayload != null)
+            var scriptPayload = payload;
+            if (scriptPayload != null)
             {
-                // Write command payload length
-                request.AddDataItem(queryPayload.PayLoadLength);
-                request.AddDataItem(queryPayload.ClassName);
-                //(text:string)(non-text-limit:int)[(fetch-plan:string)](serialized-params:bytes[])
-                request.AddDataItem(queryPayload.Text);
-                request.AddDataItem(queryPayload.NonTextLimit);
-                request.AddDataItem(queryPayload.FetchPlan);
-
-                if (queryPayload.SerializedParams == null || queryPayload.SerializedParams.Length == 0)
-                {
-                    request.AddDataItem((int)0);
-                }
+                request.AddDataItem(scriptPayload.PayLoadLength);
+                request.AddDataItem(scriptPayload.ClassName);
+                if (scriptPayload.Language != "gremlin")
+                    request.AddDataItem(scriptPayload.Language);
+                request.AddDataItem(scriptPayload.Text);
+                if (scriptPayload.SimpleParams == null)
+                    request.AddDataItem((byte)0); // 0 - false, 1 - true
                 else
                 {
-                    request.AddDataItem(queryPayload.SerializedParams);
+                    request.AddDataItem((byte)1);
+                    request.AddDataItem(scriptPayload.SimpleParams);
                 }
+                request.AddDataItem((byte)0);
                 return request;
             }
             // @todo Fix this to a better domain exception.

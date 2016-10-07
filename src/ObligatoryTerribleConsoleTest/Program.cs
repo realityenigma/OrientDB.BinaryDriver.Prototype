@@ -21,6 +21,8 @@ namespace ObligatoryTerribleConsoleTest
             }, null))
             {
                 conn.Open();
+
+                var results = conn.CreateCommand().Execute<string>("INSERT INTO Person SET Name = 'Amazing', LastName = 'Tester', Age = 99");
             }
         }
     }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace OrientDB.BinaryDriver.Prototype
+﻿namespace OrientDB.BinaryDriver.Prototype
 {
     internal class CommandPayloadQuery
     {
@@ -14,7 +9,7 @@ namespace OrientDB.BinaryDriver.Prototype
         internal int NonTextLimit { get; set; }
         internal string FetchPlan { get; set; }
         internal byte[] SerializedParams { get; set; }
-        internal new int PayLoadLength
+        internal int PayLoadLength
         {
             get
             {

@@ -24,6 +24,7 @@ namespace OrientDB.BinaryDriver.Prototype
         {
             _connectionStream = new OrientDBBinaryConnectionStream(_connectionOptions);
             _openResult = _connectionStream.Send(new DatabaseOpenOperation(_connectionOptions, _connectionStream.ConnectionMetaData));
+            _connectionStream.ConnectionMetaData.SessionId = _openResult.SessionId; // This is temporary.
         }
 
         public void Close()

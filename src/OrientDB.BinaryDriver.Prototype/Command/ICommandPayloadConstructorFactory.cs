@@ -2,6 +2,6 @@
 {
     internal interface ICommandPayloadConstructorFactory
     {
-        ICommandPayload CreatePayload(string query, string fetchPlan);
+        ICommandPayload CreatePayload(string query, string fetchPlan, ConnectionMetaData metaData);
     }
 }

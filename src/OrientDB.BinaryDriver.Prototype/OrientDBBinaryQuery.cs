@@ -19,7 +19,7 @@ namespace OrientDB.BinaryDriver.Prototype
 
         public IEnumerable<T> Execute<T>(string query)
         {
-            return _stream.Send(new DatabaseCommandOperation<T>(_payloadFactory, query)).Results;
+            return _stream.Send(new DatabaseCommandOperation<T>(_payloadFactory, _stream.ConnectionMetaData, query)).Results;
         }
     }
 }
